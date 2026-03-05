@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>30 Days of PySpark – Day 4</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0e1a; --surface: #111827; --border: #1e2d45;
+    --accent: #fb7185; --accent2: #38bdf8; --spark: #facc15;
+    --text: #e2e8f0; --muted: #64748b; --code-bg: #0d1117;
+  }
+  body { background: var(--bg); font-family: 'Inter', sans-serif; color: var(--text); min-height: 100vh; display: flex; justify-content: center; padding: 40px 20px; }
+  .card { max-width: 760px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 0 60px rgba(251,113,133,0.07), 0 20px 60px rgba(0,0,0,0.5); animation: fadeUp 0.6s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+  .header { background: linear-gradient(135deg, #0f172a 0%, #1f0f1a 100%); border-bottom: 1px solid var(--border); padding: 32px 40px 28px; position: relative; overflow: hidden; }
+  .header::before { content: ''; position: absolute; top: -40px; right: -40px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(251,113,133,0.15) 0%, transparent 70%); }
+  .header::after { content: '🔧'; position: absolute; bottom: -10px; right: 36px; font-size: 110px; opacity: 0.05; line-height: 1; }
+  .day-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(251,113,133,0.1); border: 1px solid rgba(251,113,133,0.3); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 14px; border-radius: 100px; margin-bottom: 16px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; line-height: 1.15; margin-bottom: 8px; background: linear-gradient(90deg, #fff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: var(--muted); font-size: 15px; }
+
+  .body { padding: 36px 40px; }
+  .section { margin-bottom: 32px; }
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .section p { color: #94a3b8; font-size: 15px; line-height: 1.75; }
+
+  /* Cheatsheet grid */
+  .cheat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; }
+  .cheat-card { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; transition: border-color 0.2s; }
+  .cheat-card:hover { border-color: var(--accent); }
+  .cheat-card .method { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent2); margin-bottom: 4px; }
+  .cheat-card p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* Code block */
+  .code-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+  .code-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #ffbd2e; } .dot.g { background: #28c840; }
+  .code-filename { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 4px; }
+  pre { padding: 24px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .str { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; } .num { color: #f78c6c; }
+  .var { color: #eeffff; } .op { color: #f97316; } .tp { color: #22d3ee; }
+
+  .tip-box { padding: 16px 20px; background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-left: 3px solid var(--accent2); border-radius: 8px; font-size: 13.5px; color: #94a3b8; line-height: 1.65; margin-bottom: 12px; }
+  .tip-box strong { color: var(--accent2); }
+
+  .takeaways { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .takeaways li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #94a3b8; line-height: 1.6; }
+  .takeaways li::before { content: '→'; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  .teaser { margin-top: 32px; padding: 20px 24px; background: rgba(167,139,250,0.05); border: 1px solid rgba(167,139,250,0.2); border-radius: 12px; display: flex; align-items: center; gap: 14px; }
+  .teaser .icon { font-size: 28px; flex-shrink: 0; }
+  .teaser p { font-size: 13.5px; color: #94a3b8; }
+
+  .footer { border-top: 1px solid var(--border); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 10px; border-radius: 100px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--muted); }
+  .progress { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+  .progress span { color: var(--accent); font-weight: 700; }
+
+  @media (max-width: 560px) {
+    .header, .body, .footer { padding-left: 24px; padding-right: 24px; }
+    .header h1 { font-size: 24px; }
+    .cheat-grid { grid-template-columns: 1fr; }
+    .footer { flex-direction: column; gap: 14px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="day-badge">⚡ 30 Days of PySpark · Day 4 of 30</div>
+    <h1>DataFrame Transformations<br>The Operations You'll Use Every Day</h1>
+    <p class="subtitle">select, filter, withColumn, drop, rename — and chaining like a pro</p>
+  </div>
+
+  <div class="body">
+
+    <div class="section">
+      <div class="section-label">// Transformations vs Actions — A Reminder</div>
+      <p>Transformations like <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:13px">select()</code>, <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:13px">filter()</code>, and <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:13px">withColumn()</code> are <strong style="color:#e2e8f0">lazy</strong> — they build the execution plan. Nothing runs until you call an action like <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:13px">show()</code>, <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:13px">count()</code>, or <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:13px">write()</code>. Chain as many transformations as you need — Spark optimizes them together.</p>
+    </div>
+
+    <!-- Cheatsheet -->
+    <div class="section">
+      <div class="section-label">// Core Transformation Cheatsheet</div>
+      <div class="cheat-grid">
+        <div class="cheat-card"><div class="method">select()</div><p>Pick specific columns. Supports column names, expressions, and aliases.</p></div>
+        <div class="cheat-card"><div class="method">filter() / where()</div><p>Filter rows by condition. Both are identical — use whichever reads cleaner.</p></div>
+        <div class="cheat-card"><div class="method">withColumn()</div><p>Add a new column or overwrite an existing one with an expression.</p></div>
+        <div class="cheat-card"><div class="method">withColumnRenamed()</div><p>Rename a column without touching others.</p></div>
+        <div class="cheat-card"><div class="method">drop()</div><p>Remove one or more columns from the DataFrame.</p></div>
+        <div class="cheat-card"><div class="method">distinct()</div><p>Remove duplicate rows. Equivalent to SQL's SELECT DISTINCT.</p></div>
+        <div class="cheat-card"><div class="method">limit()</div><p>Return only the first N rows. Useful for sampling large datasets.</p></div>
+        <div class="cheat-card"><div class="method">orderBy() / sort()</div><p>Sort rows by one or more columns, ascending or descending.</p></div>
+      </div>
+    </div>
+
+    <!-- Code -->
+    <div class="section">
+      <div class="section-label">// All Transformations in Action</div>
+      <div class="code-block">
+        <div class="code-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-filename">day04_transformations.py</span>
+        </div>
+        <pre><span class="kw">from</span> <span class="var">pyspark.sql</span> <span class="kw">import</span> <span class="fn">SparkSession</span>
+<span class="kw">from</span> <span class="var">pyspark.sql</span> <span class="kw">import</span> <span class="fn">functions</span> <span class="kw">as</span> <span class="var">F</span>
+
+<span class="var">spark</span> <span class="op">=</span> <span class="fn">SparkSession</span>.<span class="fn">builder</span>.<span class="fn">appName</span>(<span class="str">"Day04"</span>).<span class="fn">getOrCreate</span>()
+
+<span class="var">data</span> <span class="op">=</span> [
+    (<span class="num">1</span>, <span class="str">"Alice"</span>,   <span class="str">"Engineering"</span>, <span class="num">95000.0</span>),
+    (<span class="num">2</span>, <span class="str">"Bob"</span>,     <span class="str">"Marketing"</span>,   <span class="num">72000.0</span>),
+    (<span class="num">3</span>, <span class="str">"Charlie"</span>, <span class="str">"Engineering"</span>, <span class="num">88000.0</span>),
+    (<span class="num">4</span>, <span class="str">"Diana"</span>,   <span class="str">"HR"</span>,          <span class="num">81000.0</span>),
+    (<span class="num">5</span>, <span class="str">"Eve"</span>,     <span class="str">"Marketing"</span>,   <span class="num">67000.0</span>),
+]
+<span class="var">df</span> <span class="op">=</span> <span class="var">spark</span>.<span class="fn">createDataFrame</span>(<span class="var">data</span>, [<span class="str">"id"</span>, <span class="str">"name"</span>, <span class="str">"department"</span>, <span class="str">"salary"</span>])
+
+<span class="cm"># ── select: pick columns + alias ──────────────────────</span>
+<span class="var">df</span>.<span class="fn">select</span>(
+    <span class="fn">F.col</span>(<span class="str">"name"</span>),
+    <span class="fn">F.col</span>(<span class="str">"salary"</span>).<span class="fn">alias</span>(<span class="str">"annual_salary"</span>),
+    <span class="fn">F.col</span>(<span class="str">"department"</span>).<span class="fn">alias</span>(<span class="str">"dept"</span>)
+).<span class="fn">show</span>()
+
+<span class="cm"># ── filter: keep rows matching condition ───────────────</span>
+<span class="var">df</span>.<span class="fn">filter</span>(<span class="fn">F.col</span>(<span class="str">"department"</span>) <span class="op">==</span> <span class="str">"Engineering"</span>).<span class="fn">show</span>()
+<span class="var">df</span>.<span class="fn">filter</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">&gt;</span> <span class="num">80000</span>).<span class="fn">show</span>()
+
+<span class="cm"># ── Multiple conditions ────────────────────────────────</span>
+<span class="var">df</span>.<span class="fn">filter</span>(
+    (<span class="fn">F.col</span>(<span class="str">"department"</span>) <span class="op">==</span> <span class="str">"Engineering"</span>) <span class="op">&amp;</span>
+    (<span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">&gt;</span> <span class="num">85000</span>)
+).<span class="fn">show</span>()
+
+<span class="cm"># ── withColumn: add/overwrite a column ────────────────</span>
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumn</span>(<span class="str">"salary_usd"</span>, <span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">*</span> <span class="num">1.0</span>)
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumn</span>(<span class="str">"bonus"</span>,      <span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">*</span> <span class="num">0.10</span>)
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumn</span>(<span class="str">"seniority"</span>,
+    <span class="fn">F.when</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">&gt;=</span> <span class="num">90000</span>, <span class="str">"Senior"</span>)
+     .<span class="fn">when</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">&gt;=</span> <span class="num">75000</span>, <span class="str">"Mid"</span>)
+     .<span class="fn">otherwise</span>(<span class="str">"Junior"</span>)
+)
+
+<span class="cm"># ── rename, drop, sort ────────────────────────────────</span>
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumnRenamed</span>(<span class="str">"name"</span>, <span class="str">"full_name"</span>)
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">drop</span>(<span class="str">"salary_usd"</span>)
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">orderBy</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>).<span class="fn">desc</span>())
+
+<span class="cm"># ── Chain everything together (the clean way) ─────────</span>
+<span class="var">result</span> <span class="op">=</span> (
+    <span class="var">df</span>
+    .<span class="fn">filter</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>) <span class="op">&gt;</span> <span class="num">70000</span>)
+    .<span class="fn">select</span>(<span class="str">"full_name"</span>, <span class="str">"department"</span>, <span class="str">"salary"</span>, <span class="str">"seniority"</span>)
+    .<span class="fn">orderBy</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>).<span class="fn">desc</span>())
+    .<span class="fn">limit</span>(<span class="num">3</span>)
+)
+<span class="var">result</span>.<span class="fn">show</span>()
+
+<span class="var">spark</span>.<span class="fn">stop</span>()</pre>
+      </div>
+
+      <div class="tip-box">
+        <strong>✦ Always use F.col() over string column names.</strong> Writing <code style="font-family:'JetBrains Mono',monospace;font-size:12px">F.col("salary") &gt; 80000</code> is safer than <code style="font-family:'JetBrains Mono',monospace;font-size:12px">"salary &gt; 80000"</code> — it gives you compile-time errors, IDE autocomplete, and works correctly across all contexts.
+      </div>
+    </div>
+
+    <!-- Key Takeaways -->
+    <div class="section">
+      <div class="section-label">// Key Takeaways</div>
+      <ul class="takeaways">
+        <li>All transformations are <strong style="color:#e2e8f0">lazy</strong> — chain them freely, Spark optimizes the full plan before running.</li>
+        <li><code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">filter()</code> and <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">where()</code> are identical — pick whichever reads more naturally.</li>
+        <li>Use <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">F.when().when().otherwise()</code> to build conditional columns — it's your Spark equivalent of SQL CASE WHEN.</li>
+        <li>Combine <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">&amp;</code> (and) / <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">|</code> (or) for multi-condition filters — always wrap each condition in parentheses.</li>
+        <li>Chain transformations in a single block with parentheses — it keeps your code readable and avoids unnecessary intermediate DataFrames.</li>
+      </ul>
+    </div>
+
+    <div class="teaser">
+      <div class="icon">📅</div>
+      <p><strong style="color:#e2e8f0">Coming up on Day 5:</strong> <strong style="color:#a78bfa">Aggregations & GroupBy</strong> — groupBy, agg, count, sum, avg, pivot tables, and the difference between groupBy and Window functions.</p>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="tags">
+      <span class="tag">#PySpark</span>
+      <span class="tag">#DataEngineering</span>
+      <span class="tag">#ApacheSpark</span>
+      <span class="tag">#BigData</span>
+      <span class="tag">#Python</span>
+    </div>
+    <div class="progress">Day <span>04</span> / 30</div>
+  </div>
+</div>
+</body>
+</html>
