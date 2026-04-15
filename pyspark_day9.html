@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>30 Days of PySpark – Day 9</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0e1a; --surface: #111827; --border: #1e2d45;
+    --accent: #2dd4bf; --accent2: #f97316; --spark: #facc15;
+    --text: #e2e8f0; --muted: #64748b; --code-bg: #0d1117;
+  }
+  body { background: var(--bg); font-family: 'Inter', sans-serif; color: var(--text); min-height: 100vh; display: flex; justify-content: center; padding: 40px 20px; }
+  .card { max-width: 760px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 0 60px rgba(45,212,191,0.07), 0 20px 60px rgba(0,0,0,0.5); animation: fadeUp 0.6s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+  .header { background: linear-gradient(135deg, #0f172a 0%, #0f1e1e 100%); border-bottom: 1px solid var(--border); padding: 32px 40px 28px; position: relative; overflow: hidden; }
+  .header::before { content: ''; position: absolute; top: -40px; right: -40px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(45,212,191,0.14) 0%, transparent 70%); }
+  .header::after { content: '🐍'; position: absolute; bottom: -10px; right: 36px; font-size: 110px; opacity: 0.05; line-height: 1; }
+  .day-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.3); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 14px; border-radius: 100px; margin-bottom: 16px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; line-height: 1.15; margin-bottom: 8px; background: linear-gradient(90deg, #fff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: var(--muted); font-size: 15px; }
+
+  .body { padding: 36px 40px; }
+  .section { margin-bottom: 32px; }
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .section p { color: #94a3b8; font-size: 15px; line-height: 1.75; }
+
+  /* UDF comparison grid */
+  .udf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+  .udf-card { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: border-color 0.2s; }
+  .udf-card:hover { border-color: var(--accent); }
+  .udf-card .udf-name { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .udf-card .udf-badge { display: inline-block; font-size: 10px; font-family: 'JetBrains Mono', monospace; padding: 2px 7px; border-radius: 4px; margin-bottom: 8px; }
+  .badge-slow { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .badge-fast { background: rgba(45,212,191,0.12); color: var(--accent); border: 1px solid rgba(45,212,191,0.2); }
+  .badge-best { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+  .udf-card p { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  /* Code block */
+  .code-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+  .code-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #ffbd2e; } .dot.g { background: #28c840; }
+  .code-filename { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 4px; }
+  pre { padding: 24px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
+  .kw { color: #c792ea; } .fn { color: #82aaff; } .str { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; } .num { color: #f78c6c; }
+  .var { color: #eeffff; } .op { color: #f97316; } .tp { color: #22d3ee; }
+
+  .tip-box { padding: 16px 20px; background: rgba(45,212,191,0.06); border: 1px solid rgba(45,212,191,0.2); border-left: 3px solid var(--accent); border-radius: 8px; font-size: 13.5px; color: #94a3b8; line-height: 1.65; margin-bottom: 12px; }
+  .tip-box strong { color: var(--accent); }
+  .warn-box { padding: 16px 20px; background: rgba(249,115,22,0.05); border: 1px solid rgba(249,115,22,0.2); border-left: 3px solid var(--accent2); border-radius: 8px; font-size: 13.5px; color: #94a3b8; line-height: 1.65; }
+  .warn-box strong { color: var(--accent2); }
+
+  .takeaways { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .takeaways li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #94a3b8; line-height: 1.6; }
+  .takeaways li::before { content: '→'; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  .teaser { margin-top: 32px; padding: 20px 24px; background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); border-radius: 12px; display: flex; align-items: center; gap: 14px; }
+  .teaser .icon { font-size: 28px; flex-shrink: 0; }
+  .teaser p { font-size: 13.5px; color: #94a3b8; }
+
+  .footer { border-top: 1px solid var(--border); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 10px; border-radius: 100px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--muted); }
+  .progress { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+  .progress span { color: var(--accent); font-weight: 700; }
+
+  @media (max-width: 560px) {
+    .header, .body, .footer { padding-left: 24px; padding-right: 24px; }
+    .header h1 { font-size: 24px; }
+    .udf-grid { grid-template-columns: 1fr; }
+    .footer { flex-direction: column; gap: 14px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="day-badge">⚡ 30 Days of PySpark · Day 9 of 30</div>
+    <h1>User Defined Functions<br>Power Tool — Handle With Care</h1>
+    <p class="subtitle">Python UDFs vs Pandas UDFs — and why the wrong choice tanks performance</p>
+  </div>
+
+  <div class="body">
+
+    <div class="section">
+      <div class="section-label">// What is a UDF?</div>
+      <p>A UDF (User Defined Function) lets you apply custom Python logic to a DataFrame column when Spark's built-in functions aren't enough. They're powerful — but come with a real performance cost. Knowing <strong style="color:#e2e8f0">which type to use</strong> and <strong style="color:#e2e8f0">when to avoid them entirely</strong> separates good engineers from great ones.</p>
+    </div>
+
+    <!-- UDF types comparison -->
+    <div class="section">
+      <div class="section-label">// 3 Ways to Define Custom Logic — Ranked by Performance</div>
+      <div class="udf-grid">
+        <div class="udf-card">
+          <div class="udf-name" style="color:#f87171;">Python UDF</div>
+          <div class="udf-badge badge-slow">⚠ Slowest</div>
+          <p>Serializes each row to Python, processes it, returns to JVM. Row-by-row. No Spark optimizations. Use only as last resort.</p>
+        </div>
+        <div class="udf-card">
+          <div class="udf-name" style="color:#2dd4bf;">Pandas UDF</div>
+          <div class="udf-badge badge-fast">✦ Fast</div>
+          <p>Uses Apache Arrow for batch transfer. Processes chunks as Pandas Series. 10–100x faster than Python UDFs.</p>
+        </div>
+        <div class="udf-card">
+          <div class="udf-name" style="color:#34d399;">Built-in F.*</div>
+          <div class="udf-badge badge-best">★ Always First</div>
+          <p>Pure JVM execution. Catalyst optimizer can see and optimize them. Zero Python overhead. Always prefer these.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code -->
+    <div class="section">
+      <div class="section-label">// Python UDF vs Pandas UDF in Action</div>
+      <div class="code-block">
+        <div class="code-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="code-filename">day09_udfs.py</span>
+        </div>
+        <pre><span class="kw">from</span> <span class="var">pyspark.sql</span> <span class="kw">import</span> <span class="fn">SparkSession</span>
+<span class="kw">from</span> <span class="var">pyspark.sql</span> <span class="kw">import</span> <span class="fn">functions</span> <span class="kw">as</span> <span class="var">F</span>
+<span class="kw">from</span> <span class="var">pyspark.sql.types</span> <span class="kw">import</span> <span class="tp">StringType</span>, <span class="tp">DoubleType</span>
+<span class="kw">from</span> <span class="var">pyspark.sql.functions</span> <span class="kw">import</span> <span class="fn">pandas_udf</span>
+<span class="kw">import</span> <span class="var">pandas</span> <span class="kw">as</span> <span class="var">pd</span>
+
+<span class="var">spark</span> <span class="op">=</span> <span class="fn">SparkSession</span>.<span class="fn">builder</span>.<span class="fn">appName</span>(<span class="str">"Day09"</span>).<span class="fn">getOrCreate</span>()
+
+<span class="var">data</span> <span class="op">=</span> [(<span class="str">"alice smith"</span>, <span class="num">95000.0</span>), (<span class="str">"bob jones"</span>, <span class="num">72000.0</span>),
+        (<span class="str">"charlie brown"</span>, <span class="num">88000.0</span>), (<span class="str">"diana prince"</span>, <span class="num">81000.0</span>)]
+<span class="var">df</span> <span class="op">=</span> <span class="var">spark</span>.<span class="fn">createDataFrame</span>(<span class="var">data</span>, [<span class="str">"name"</span>, <span class="str">"salary"</span>])
+
+<span class="cm"># ════════════════════════════════════════════════════</span>
+<span class="cm"># ① PYTHON UDF — row by row, slow, avoid in production</span>
+<span class="cm"># ════════════════════════════════════════════════════</span>
+<span class="op">@</span><span class="fn">F.udf</span>(<span class="tp">StringType</span>())
+<span class="kw">def</span> <span class="fn">title_case</span>(<span class="var">name</span>: <span class="var">str</span>) <span class="op">-&gt;</span> <span class="var">str</span>:
+    <span class="kw">if</span> <span class="var">name</span> <span class="kw">is</span> <span class="kw">None</span>:
+        <span class="kw">return</span> <span class="kw">None</span>
+    <span class="kw">return</span> <span class="str">" "</span>.<span class="fn">join</span>(<span class="var">w</span>.<span class="fn">capitalize</span>() <span class="kw">for</span> <span class="var">w</span> <span class="kw">in</span> <span class="var">name</span>.<span class="fn">split</span>())
+
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumn</span>(<span class="str">"name_titled"</span>, <span class="fn">title_case</span>(<span class="fn">F.col</span>(<span class="str">"name"</span>)))
+
+<span class="cm"># ════════════════════════════════════════════════════</span>
+<span class="cm"># ② PANDAS UDF — batch processing via Arrow, much faster</span>
+<span class="cm"># ════════════════════════════════════════════════════</span>
+<span class="op">@</span><span class="fn">pandas_udf</span>(<span class="tp">DoubleType</span>())
+<span class="kw">def</span> <span class="fn">apply_tax</span>(<span class="var">salary</span>: <span class="var">pd</span>.<span class="tp">Series</span>) <span class="op">-&gt;</span> <span class="var">pd</span>.<span class="tp">Series</span>:
+    <span class="cm"># Entire column arrives as a Pandas Series — vectorized!</span>
+    <span class="kw">return</span> <span class="var">salary</span>.<span class="fn">apply</span>(<span class="kw">lambda</span> <span class="var">s</span>: <span class="var">s</span> <span class="op">*</span> <span class="num">0.75</span> <span class="kw">if</span> <span class="var">s</span> <span class="op">&gt;</span> <span class="num">80000</span> <span class="kw">else</span> <span class="var">s</span> <span class="op">*</span> <span class="num">0.85</span>)
+
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumn</span>(<span class="str">"net_salary"</span>, <span class="fn">apply_tax</span>(<span class="fn">F.col</span>(<span class="str">"salary"</span>)))
+
+<span class="cm"># ════════════════════════════════════════════════════</span>
+<span class="cm"># ③ BUILT-IN — always try this FIRST (fastest by far)</span>
+<span class="cm"># ════════════════════════════════════════════════════</span>
+<span class="var">df</span> <span class="op">=</span> <span class="var">df</span>.<span class="fn">withColumn</span>(<span class="str">"name_titled_native"</span>,
+    <span class="fn">F.initcap</span>(<span class="fn">F.col</span>(<span class="str">"name"</span>))  <span class="cm"># Same result, zero Python overhead!</span>
+)
+
+<span class="cm"># Register UDF for Spark SQL</span>
+<span class="var">spark</span>.<span class="fn">udf</span>.<span class="fn">register</span>(<span class="str">"title_case"</span>, <span class="fn">title_case</span>)
+<span class="var">spark</span>.<span class="fn">sql</span>(<span class="str">"SELECT title_case(name), salary FROM employees"</span>)
+
+<span class="var">df</span>.<span class="fn">show</span>()
+<span class="var">spark</span>.<span class="fn">stop</span>()</pre>
+      </div>
+
+      <div class="tip-box">
+        <strong>✦ The Golden Rule:</strong> Before writing any UDF, spend 5 minutes checking if <code style="font-family:'JetBrains Mono',monospace;font-size:12px">pyspark.sql.functions</code> already has what you need. In the example above, <code style="font-family:'JetBrains Mono',monospace;font-size:12px">F.initcap()</code> does exactly what the Python UDF does — with zero Python overhead and full Catalyst optimization.
+      </div>
+      <div class="warn-box" style="margin-top:12px">
+        <strong>⚠️ Python UDF performance cost:</strong> Each row is serialized from JVM → Python → JVM. On 1 billion rows, that's 3 billion serialization operations. Spark's Catalyst optimizer also can't see inside a UDF — it treats it as a black box and can't optimize around it. Use Pandas UDFs when custom Python logic is unavoidable.
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">// Key Takeaways</div>
+      <ul class="takeaways">
+        <li>Always check <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">pyspark.sql.functions</code> first — built-ins run on the JVM and are always faster.</li>
+        <li>If you must use a UDF, prefer <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">pandas_udf</code> — it uses Apache Arrow for batch transfer, not row-by-row serialization.</li>
+        <li>Python UDFs are black boxes to Spark — the Catalyst optimizer cannot see inside or optimize around them.</li>
+        <li>Always handle <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">None</code> explicitly inside UDFs — null inputs don't raise errors, they silently return null.</li>
+        <li>Register UDFs with <code style="font-family:'JetBrains Mono',monospace;color:#facc15;font-size:12px">spark.udf.register()</code> to use them in Spark SQL queries.</li>
+      </ul>
+    </div>
+
+    <div class="teaser">
+      <div class="icon">📅</div>
+      <p><strong style="color:#e2e8f0">Coming up on Day 10:</strong> <strong style="color:#fbbf24">Spark SQL</strong> — running SQL queries directly on DataFrames, temp views, and why sometimes SQL is just cleaner than the DataFrame API.</p>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="tags">
+      <span class="tag">#PySpark</span>
+      <span class="tag">#DataEngineering</span>
+      <span class="tag">#ApacheSpark</span>
+      <span class="tag">#BigData</span>
+      <span class="tag">#Python</span>
+    </div>
+    <div class="progress">Day <span>09</span> / 30</div>
+  </div>
+</div>
+</body>
+</html>
